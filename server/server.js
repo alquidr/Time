@@ -7,7 +7,6 @@ const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
 
 var {mongoose} = require('./db/mongoose');
-var {Todo} = require('./models/todo');
 var {User} = require('./models/user');
 var {Task} = require('./models/task');
 var {Project} = require('./models/project');
@@ -123,6 +122,7 @@ app.post('/tasks', authenticate, (req, res) => {
     description: req.body.description,
     startDate: new Date(),
     isPaused: req.body.isPaused,
+    elapsedTime:req.body.elapsedTime,
     estimatedTime : req.body.estimatedTime,
     _creator: req.user._id,
     _project: req.body.project
@@ -213,9 +213,6 @@ app.patch('/tasks/:id', authenticate, (req, res) => {
             var taskPausedTime = new Date();
             currentElapsedTime = Math.round((taskPausedTime - taskStartTime) / 1000);
             body.elapsedTime = Math.round((taskPausedTime - taskStartTime) / 1000);
-            /*console.log(taskStartTime);
-            console.log(taskPausedTime);
-            console.log(currentElapsedTime + "dif");*/
             body.name = req.body.name
             body.description = req.body.description
             body.isPaused = true;
@@ -236,7 +233,6 @@ app.patch('/tasks/:id', authenticate, (req, res) => {
         });
 
   } else {
-        //console.log("no hubo pausa");
         body.name = req.body.name;
         body.description = req.body.description;
         body.description = 
@@ -303,100 +299,6 @@ app.get('/usersTimeSummary', authenticate, (req, res) => {
 
 });
 
-//#endregion
-
-//#region TODO API
-app.post('/todos', authenticate, (req, res) => {
-  var todo = new Todo({
-    text: req.body.text,
-    _creator: req.user._id
-  });
-
-  todo.save().then((doc) => {
-    res.send(doc);
-  }, (e) => {
-    res.status(400).send(e);
-  });
-});
-
-app.get('/todos', authenticate, (req, res) => {
-  Todo.find({
-    _creator: req.user._id
-  }).then((todos) => {
-    res.send({todos});
-  }, (e) => {
-    res.status(400).send(e);
-  });
-});
-
-app.get('/todos/:id', authenticate, (req, res) => {
-  var id = req.params.id;
-
-  if (!ObjectID.isValid(id)) {
-    return res.status(404).send();
-  }
-
-  Todo.findOne({
-    _id: id,
-    _creator: req.user._id
-  }).then((todo) => {
-    if (!todo) {
-      return res.status(404).send();
-    }
-
-    res.send({todo});
-  }).catch((e) => {
-    res.status(400).send();
-  });
-});
-
-app.delete('/todos/:id', authenticate, (req, res) => {
-  var id = req.params.id;
-  var body = _.pick(req.body, ['text', 'completed']);
-
-  if (!ObjectID.isValid(id)) {
-    return res.status(404).send();
-  }
-
-  Todo.findOneAndRemove({
-    _id: id,
-    _creator: req.user._id
-  }).then((todo) => {
-    if (!todo) {
-      return res.status(404).send();
-    }
-
-    res.send({todo});
-  }).catch((e) => {
-    res.status(400).send();
-  });
-});
-
-app.patch('/todos/:id', authenticate, (req, res) => {
-  var id = req.params.id;
-  var body = _.pick(req.body, ['text', 'completed']);
-
-  if (!ObjectID.isValid(id)) {
-    return res.status(404).send();
-  }
-
-  if (_.isBoolean(body.completed) && body.completed) {
-    body.completedAt = new Date().getTime();
-  } else {
-    body.completed = false;
-    body.completedAt = null;
-  }
-
-  Todo.findOneAndUpdate({_id: id, _creator: req.user._id}, {$set: body}, {new: true}).then((todo) => {
-    if (!todo) {
-      return res.status(404).send();
-    }
-
-    res.send({todo});
-  }).catch((e) => {
-    res.status(400).send();
-  })
-});
 //#endregion
 
 //#region API USERS
